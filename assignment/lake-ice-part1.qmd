@@ -62,7 +62,21 @@ Be sure that the title, x-axis, and y-axis labels are clearly labeled.
 **Answer 1:**
 
 ```{r}
+library(tidyverse)
+# Ensure ice_off_doy is numeric
+sunapee <- sunapee %>%
+  mutate(ice_off_doy = as.numeric(ice_off_doy))
 
+# Plot
+ggplot(sunapee, aes(x = year, y = ice_off_doy)) +
+  geom_line(color = "steelblue") +
+  geom_point(color = "darkred") +
+  labs(
+    title = "Lake Sunapee Ice-Off Day of Year (1869–Present)",
+    x = "Year",
+    y = "Ice-Off Day of Year"
+  ) +
+  theme_minimal()
 ```
 
 # How does ice cover change over time at Lake Sunapee?
@@ -80,13 +94,15 @@ Use the `lm` function to predict `ice_off_doy` as a function (`~`) of the year f
 Create an object called `fit` that contains the results of the linear model.
 
 ```{r}
-
+# Fit linear regression
+fit <- lm(ice_off_doy ~ year, data = sunapee)
 ```
 
 Then, use the function `summary` to explore the result of the `lm` function.
 
 ```{r}
-
+# Examine the results
+summary(fit)
 ```
 
 The results of your linear model are in an object named `fit`, so you can find the regression coefficients at `fit$coefficients[1]` (the intercept) and `fit$coefficients[2]` (the slope). Confirm that `fit$coefficients[1]` and `fit$coefficients[2]` match the values expected from the summary command you ran above.
@@ -108,11 +124,17 @@ What is the direction of the slope? How does this match your expectations from Q
 
 First, it is important to understand how much variation is explained by the model using the R2 value in the `summary`. A value of R2 close to 1 means that the predictor (`year`) explains nearly all of the variation in the variable we are predicting: `ice_off_doy`. A value of R2 close to 0 explains very little of the variation in `ice_off_doy`. Since we want to be able to explain how `ice_off_doy` is changing over time using `year,` we are aiming for a high R2. A low R2 would indicate that our model isn't particularly good at explaining what future values of `ice_off_doy` will be.
 
+The slope estimate for year is -0.106, meaning each year the ice off day is happening earlier.
+The multiple R2 is 0.206, meaning roughly 20.6% of the variation in ice off dates is explained by the year.
+The p-value is 2.5e-09, meaning that the negative trend is statistically significant.
+
 **Question 4:**
 
 What is the R2 for the regression? Based on the R2, is `year` and `ice_off_doy` strongly related?
 
 **Answer 4:**
+
+Based on the R2, year and ice_off_day are moderately related, but not a strong relationship.
 
 ## Residuals normally distributed
 
@@ -137,6 +159,18 @@ sunapee <- sunapee %>%
          residual = ice_off_doy - predicted) #Observed - Predicted
 ```
 
+```{r}
+# Histogram of residuals
+ggplot(sunapee, aes(x = residual)) +
+  geom_histogram(bins = 20, fill = "steelblue", color = "black") +
+  labs(
+    title = "Histogram of Residuals for Lake Sunapee Ice-Off Regression",
+    x = "Residual (Observed - Predicted DOY)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
 **Question 5:**
 
 Use the [`add_predictions()`](https://modelr.tidyverse.org/reference/add_predictions.html) and [`add_residuals()`](https://modelr.tidyverse.org/reference/add_residuals.html) functions from the `modelr` package (installs with the tidyverse but you need to load it with ` library()`) to add the predictions and residuals. This accomplishes the same thing above but doesn't require you to specifically write our your model with the coefficients (thus is more scalable to other models)
@@ -144,7 +178,23 @@ Use the [`add_predictions()`](https://modelr.tidyverse.org/reference/add_predict
 **Answer 5:**
 
 ```{r}
+library(tidyverse)
+library(modelr)
 
+# Add predictions and residuals using modelr
+sunapee <- sunapee %>%
+  add_predictions(fit, var = "predicted") %>%
+  add_residuals(fit, var = "residual")
+
+# Visualize residuals with histogram
+ggplot(sunapee, aes(x = residual)) +
+  geom_histogram(binwidth = 10, fill = "steelblue", color = "black") +
+  labs(
+    title = "Histogram of Residuals for Lake Sunapee Ice-Off Regression",
+    x = "Residual (Observed - Predicted DOY)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
 ```
 
 Now, to visualize the residuals, use `geom_histogram()` to plot them as a histogram. I recommend using a bin width of 10 in the histogram.
