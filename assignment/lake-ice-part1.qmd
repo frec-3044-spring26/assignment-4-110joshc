@@ -63,11 +63,11 @@ Be sure that the title, x-axis, and y-axis labels are clearly labeled.
 
 ```{r}
 library(tidyverse)
-# Ensure ice_off_doy is numeric
+# as numeric conversion
 sunapee <- sunapee %>%
   mutate(ice_off_doy = as.numeric(ice_off_doy))
 
-# Plot
+# line plot
 ggplot(sunapee, aes(x = year, y = ice_off_doy)) +
   geom_line(color = "steelblue") +
   geom_point(color = "darkred") +
@@ -94,20 +94,20 @@ Use the `lm` function to predict `ice_off_doy` as a function (`~`) of the year f
 Create an object called `fit` that contains the results of the linear model.
 
 ```{r}
-# Fit linear regression
+# model
 fit <- lm(ice_off_doy ~ year, data = sunapee)
 ```
 
 Then, use the function `summary` to explore the result of the `lm` function.
 
 ```{r}
-# Examine the results
 summary(fit)
 ```
 
 The results of your linear model are in an object named `fit`, so you can find the regression coefficients at `fit$coefficients[1]` (the intercept) and `fit$coefficients[2]` (the slope). Confirm that `fit$coefficients[1]` and `fit$coefficients[2]` match the values expected from the summary command you ran above.
 
 ```{r}
+# coefficients
 fit$coefficients[1]
 fit$coefficients[2]
 ```
@@ -126,7 +126,6 @@ First, it is important to understand how much variation is explained by the mode
 
 The slope estimate for year is -0.106, meaning each year the ice off day is happening earlier.
 The multiple R2 is 0.206, meaning roughly 20.6% of the variation in ice off dates is explained by the year.
-The p-value is 2.5e-09, meaning that the negative trend is statistically significant.
 
 **Question 4:**
 
@@ -160,7 +159,7 @@ sunapee <- sunapee %>%
 ```
 
 ```{r}
-# Histogram of residuals
+# histogram
 ggplot(sunapee, aes(x = residual)) +
   geom_histogram(bins = 20, fill = "steelblue", color = "black") +
   labs(
@@ -178,23 +177,11 @@ Use the [`add_predictions()`](https://modelr.tidyverse.org/reference/add_predict
 **Answer 5:**
 
 ```{r}
-library(tidyverse)
 library(modelr)
 
-# Add predictions and residuals using modelr
 sunapee <- sunapee %>%
   add_predictions(fit, var = "predicted") %>%
   add_residuals(fit, var = "residual")
-
-# Visualize residuals with histogram
-ggplot(sunapee, aes(x = residual)) +
-  geom_histogram(binwidth = 10, fill = "steelblue", color = "black") +
-  labs(
-    title = "Histogram of Residuals for Lake Sunapee Ice-Off Regression",
-    x = "Residual (Observed - Predicted DOY)",
-    y = "Frequency"
-  ) +
-  theme_minimal()
 ```
 
 Now, to visualize the residuals, use `geom_histogram()` to plot them as a histogram. I recommend using a bin width of 10 in the histogram.
@@ -206,7 +193,15 @@ Show Histogram and answer the following question: do the residuals meet the assu
 **Answer 6:**
 
 ```{r}
-
+# histogram of residuals
+ggplot(sunapee, aes(x = residual)) +
+  geom_histogram(binwidth = 10, fill = "steelblue", color = "black") +
+  labs(
+    title = "Histogram of Residuals for Lake Sunapee Ice-Off Regression",
+    x = "Residual (Observed - Predicted DOY)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
 ```
 
 
@@ -220,6 +215,8 @@ Based on the `summary()` above, what is the p-value for the slope?
 
 **Answer 7:**
 
+The p-value is 2.5e-09, meaning that the negative trend is statistically significant.
+
 ## The slope physically meaningful
 
 A slope value could have a low probability of being 0 (thus we have a strong belief that it is not zero), but the magnitude of change is functionally meaningless in the physical world (i.e., the rate of change is so small that we would not think much of it). This can occur particularly when analyzing large datasets.
@@ -230,6 +227,11 @@ Based on the slope value, how many more years are needed to pass before the lake
 
 **Answer 8:**
 
+Slope -> -0.106
+Years <- change in days/slope = 7/-0.106 = 66 years
+
+Yes, because a shift of 1 week over multiple decades shows a large climate change. Even though the slope is small, it will accumulate over time.
+
 ## Overall model assessment
 
 **Question 9:**
@@ -238,12 +240,25 @@ How comfortable are you proceeding with using this linear model for additional a
 
 **Answer 9:**
 
+Pretty comfortable using this linear model. Why, because the trend is statistically significant since the slope is negative and the p-value is very small. Residuals are cenntered around zero and normally distributed. Slope is small but accumulates. Moderate R2, showing there's a year to year variability.
+
 **Question 10:**
 Now plot the data for Lake Sunapee (just like above - year on x-axis vs. ice of doy on y axis) but add the line from your regression results (e.g., fit intercept and slope). You will use the [`geom_abline`](https://ggplot2.tidyverse.org/reference/geom_abline.html). 
 
 **Answer 10:**
 ```{r}
+# Extract intercept and slope
+intercept <- coef(fit)[1]
+slope <- coef(fit)[2]
 
+# Plot
+ggplot(sunapee, aes(x = year, y = ice_off_doy)) +
+  geom_point(color = "blue") +                     # points
+  geom_abline(intercept = intercept, slope = slope, color = "red", size = 1) + # regression line
+  labs(title = "Lake Sunapee Ice Day of Year vs Year",
+       x = "Year",
+       y = "Ice Day of Year") +
+  theme_minimal()
 ```
 
 **Question 11:**
@@ -258,8 +273,32 @@ The goal of this question is to make a forecast of the future ice-off day (with 
 **Answer 11:**
 
 ```{r}
+# 1. Predict ice-off day for 2040
+pred_2040 <- predict(fit, newdata = data.frame(year = 2040))
+pred_2040
 
+# 2. Compute 90% empirical confidence interval from residuals
+resid_lower <- quantile(sunapee$residual, 0.05)  # negative value
+resid_upper <- quantile(sunapee$residual, 0.95)  # positive value
+
+# 3. Calculate lower and upper bounds for 2040 prediction
+ci_lower <- pred_2040 + resid_lower
+ci_upper <- pred_2040 + resid_upper
+ci_lower
+ci_upper
+
+# 4. Width of the confidence interval (in days)
+ci_width <- ci_upper - ci_lower
+ci_width
 ```
+
+Predicted ice-off day for 2040: 102.7 (day of year)
+
+90% confidence interval lower bound: 83.2
+
+90% confidence interval upper bound: 116.8
+
+Width of confidence interval: 33.6 days
 
 # Is the ice-off day of the year changing more quickly in more recent years at Lake Sunapee?
 
@@ -273,6 +312,34 @@ Use the skills developed above to evaluate the question "Is the ice-off day of y
 
 Use a mix of code, figures, and text to present your analysis.  If you want to compare slopes, be sure they are on the same plot.
 
+```{r}
+# Split dataset
+sunapee_early <- sunapee %>% filter(year < 1970)
+sunapee_late  <- sunapee %>% filter(year >= 1970)
+
+# Fit separate linear models
+fit_early <- lm(ice_off_doy ~ year, data = sunapee_early)
+fit_late  <- lm(ice_off_doy ~ year, data = sunapee_late)
+
+# Extract coefficients
+coef_early <- coef(fit_early)
+coef_late  <- coef(fit_late)
+
+# Plot points and regression lines
+ggplot(sunapee, aes(x = year, y = ice_off_doy)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = coef_early[1], slope = coef_early[2], color = "red", size = 1) +
+  geom_abline(intercept = coef_late[1], slope = coef_late[2], color = "green", size = 1) +
+  labs(title = "Lake Sunapee Ice Day of Year: Early vs Late Periods",
+       x = "Year",
+       y = "Ice Day of Year") +
+  theme_minimal() +
+  annotate("text", x = 1950, y = max(sunapee$ice_doy), label = "Before 1970", color = "red") +
+  annotate("text", x = 1990, y = max(sunapee$ice_doy), label = "1970 and After", color = "green")
+```
+
+The slope of the early model shows a much flatter line, compared to the model after 1970. We can deduce that due to human impact and climate change we see in more recent years, that the ice off day is occuring earlier and earlier each year.
+
 # Rendering and committing
 
 Remember to Render your document as HTML and comment+push to GitHub your code and rendered HTML that was created when you rendered the document. Your GitHub repository should have multiple commits with informative commit messages.
@@ -285,3 +352,4 @@ This module was initially developed as an Excel-based activity by Carey, C.C., J
 
 Include citation of any AI-generated assistance or discussion with classmates (per policy in syllabus). Proper documentation of AI-generated assistance includes the prompt, the source (e.g., ChatGPT), and the significant parts of the response.  Proper documentation of discussion with classmates include listing their names and the components discussed.  
 
+https://chatgpt.com/share/699d236c-e67c-800c-aaab-b4ef1e3af5d6
